@@ -1,0 +1,37 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Base infrastructure.'
+Parameters:
+  Password:
+    Type: String
+Resources:
+  Vpc:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      Parameters:
+        S3Endpoint: 'false'
+        DynamoDBEndpoint: 'false'
+        FlowLog: 'false'
+        NatGateways: 'false'
+      TemplateURL: './node_modules/@cfn-modules/vpc/module.yml'
+  ClientSg:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      Parameters:
+        VpcModule: !GetAtt 'Vpc.Outputs.StackName'
+      TemplateURL: './node_modules/@cfn-modules/client-sg/module.yml'
+  Key:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      TemplateURL: './node_modules/@cfn-modules/kms-key/module.yml'
+  AuroraServerlessCluster:
+    Type: 'AWS::CloudFormation::Stack'
+    Properties:
+      Parameters:
+        VpcModule: !GetAtt 'Vpc.Outputs.StackName'
+        ClientSgModule: !GetAtt 'ClientSg.Outputs.StackName'
+        KmsKeyModule: !GetAtt 'Key.Outputs.StackName'
+        DBName: 'test'
+        DBMasterUsername: 'master'
+        DBMasterUserPassword: !Ref Password
+      TemplateURL: './node_modules/@cfn-modules/rds-aurora-serverless/module.yml'
